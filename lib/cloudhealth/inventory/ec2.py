@@ -34,6 +34,20 @@ class Ec2Inventory(object):
         # Read settings and parse CLI arguments
         self.__read_settings()
 
+    def instances(self):
+        ''' Do API calls to each region '''
+
+        for region in self.regions:
+            for inst in self.__get_instances_by_region(region):
+                yield inst
+
+    def rds_instances(self):
+        ''' Do API calls to each region '''
+
+        for region in self.regions:
+            for inst in self.__get_rds_instances_by_region(region):
+                yield inst
+
     def __read_settings(self):
         ''' Reads the settings from the ec2.ini file '''
 
@@ -58,18 +72,6 @@ class Ec2Inventory(object):
         else:
             self.regions = configRegions.split(",")
 
-
-    def load(self):
-        ''' Do API calls to each region '''
-
-        for region in self.regions:
-            self.__get_instances_by_region(region)
-            self.__get_rds_instances_by_region(region)
-
-    def print_inventory(self):
-        ''' '''
-        return self.__json_format_dict(self.inventory, True)
-
     def __get_connection(self, region):
         ''' Creates EC2 connection to a region and caches it '''
 
@@ -85,11 +87,12 @@ class Ec2Inventory(object):
         try:
             conn = self.__get_connection(region)
             
-            reservations = conn.get_all_instances()
-            for reservation in reservations:
-                for instance in reservation.instances:
-                    self.__add_instance(instance, region)
-        
+            if conn:
+                reservations = conn.get_all_instances()
+                for reservation in reservations:
+                    for instance in reservation.instances:
+                        yield instance
+
         except boto.exception.BotoServerError as e:
             print "BotoServerError: "
             print e
@@ -104,13 +107,14 @@ class Ec2Inventory(object):
             if conn:
                 instances = conn.get_all_dbinstances()
                 for instance in instances:
-                    self.__add_rds_instance(instance, region)
+                    yield instance
+
         except boto.exception.BotoServerError as e:
             print "RDS BotoServerError: "
             print e
             sys.exit(1)
 
-    def __get_instance(self, region, instance_id):
+    def get_instance(self, region, instance_id):
         ''' Gets details about a specific instance '''
 
         conn = ec2.get_connection(region)

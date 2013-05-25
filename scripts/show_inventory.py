@@ -7,7 +7,7 @@ import argparse
 sys.path.append('../lib')
 import cloudhealth
 from cloudhealth import inventory
-from inventory import *
+from cloudhealth.inventory import ec2
 
 class ShowInventoryCli(object):
 
@@ -34,10 +34,11 @@ class ShowInventoryCli(object):
 		ec2_access_key = os.environ['EC2_ACCESS_KEY']
 		ec2_secret_key = os.environ['EC2_SECRET_KEY']
 
-		inv = Ec2Inventory(ec2_access_key, ec2_secret_key)
-		print "Loading..."
-		inv.load()
-		print inv.print_inventory()
+		inv = ec2.Ec2Inventory(ec2_access_key, ec2_secret_key)
+		for inst in inv.instances():
+			print inst.id, ':', inst.state
+		#for inst in inv.rds_instances():
+		#	print inst
 
 if __name__ == '__main__':
 	cli = ShowInventoryCli()
