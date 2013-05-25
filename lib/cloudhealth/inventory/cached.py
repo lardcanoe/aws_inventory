@@ -5,6 +5,7 @@ import os
 import argparse
 import pymongo
 from pymongo import MongoClient
+#from bson.objectid import ObjectId
 import datetime
 
 class CachedInventory(object):
@@ -19,12 +20,16 @@ class CachedInventory(object):
 
 	def update_instance(self, customer, instance):
 		inst_json = self.__inst_to_json(customer, instance)
-		self.cloudhealth.inventory.insert(inst_json)
+		self.cloudhealth.inventory.update(
+			{ '_id': instance.id },
+			{ '$set': inst_json },
+			upsert = True
+		)
 
 	def __inst_to_json(self, customer, instance):
 		inst_json = {
+			'last_update_ts': datetime.datetime.utcnow(),
 			'customer_id': customer.Id(),
-			'_id': instance.id,
 			'state': instance.state
 		}
 		return inst_json
