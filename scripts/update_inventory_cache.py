@@ -45,7 +45,16 @@ class StoreInventoryCli(object):
 					inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key)
 					for inst in inv.instances():
 						cache.update_instance(customer, inst)
-						print customer.name, ':', inst.id, ':', inst.state
+						print customer.name, ':Instance:', inst.id, ':', inst.state
+					for vol in inv.volumes():
+						cache.update_volume(customer, vol)
+						print customer.name, ':Volume:', vol.id, ':', vol.status
+					snap_count = 0
+					for snap in inv.snapshots():
+						cache.update_snapshot(customer, snap)
+						snap_count += 1
+						#print customer.name, ':Snapshot:', snap.id, ':', snap.status, ':', snap.volume_id
+					print customer.name, ':Snapshots:', snap_count
 				else:
 					print 'Unimplemented Cloud Provider: ', cp.provider_type
 

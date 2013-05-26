@@ -41,6 +41,20 @@ class Ec2Inventory(object):
             for inst in self.__get_instances_by_region(region):
                 yield inst
 
+    def volumes(self):
+        ''' Do API calls to each region '''
+
+        for region in self.regions:
+            for vol in self.__get_volumes_by_region(region):
+                yield vol
+
+    def snapshots(self):
+        ''' Do API calls to each region '''
+
+        for region in self.regions:
+            for s in self.__get_snapshots_by_region(region):
+                yield s
+
     def rds_instances(self):
         ''' Do API calls to each region '''
 
@@ -92,6 +106,38 @@ class Ec2Inventory(object):
                 for reservation in reservations:
                     for instance in reservation.instances:
                         yield instance
+
+        except boto.exception.BotoServerError as e:
+            print "BotoServerError: "
+            print e
+            sys.exit(1)
+
+    def __get_volumes_by_region(self, region):
+        ''' Makes an AWS EC2 API call to the list of volumes in a particular
+        region '''
+
+        try:
+            conn = self.__get_connection(region)
+            
+            if conn:
+                for vol in conn.get_all_volumes():
+                    yield vol
+
+        except boto.exception.BotoServerError as e:
+            print "BotoServerError: "
+            print e
+            sys.exit(1)
+
+    def __get_snapshots_by_region(self, region):
+        ''' Makes an AWS EC2 API call to the list of volumes in a particular
+        region '''
+
+        try:
+            conn = self.__get_connection(region)
+            
+            if conn:
+                for s in conn.get_all_snapshots():
+                    yield s
 
         except boto.exception.BotoServerError as e:
             print "BotoServerError: "
