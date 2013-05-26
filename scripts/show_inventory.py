@@ -5,6 +5,7 @@ import os
 import argparse
 import string
 import itertools
+from boto import ec2
 
 sys.path.append('../lib')
 import cloudhealth
@@ -23,12 +24,26 @@ class ShowInventoryCli(object):
 		parser = argparse.ArgumentParser(
 			description='Produce an inventory list based on cached EC2 data',
 			prog='Cached Inventory')
-		parser.add_argument('--verbose', '-v', action='count')
 		parser.add_argument('--version', action='version', version='%(prog)s 2.0')
+
+		#Customer
 		parser.add_argument('--customer', '-c', required = True)
+
+		#Display Options
+		parser.add_argument('--verbose', '-v', action='count')
 		parser.add_argument('--hide-header', action = 'store_true', default = False)
+
+		#Query Options
 		parser.add_argument('--type', choices=['instances', 'volumes', 'snapshots'], required=True)
 		parser.add_argument('--source', '-s', choices=['cache', 'provider'], default = 'cache')
+
+		#Filters
+		parser.add_argument('--instance', '-i', default = None, help = 'Shows volumes for specified instance')
+		parser.add_argument('--volume', default = None, help = 'Shows snapshots for specified volumes')
+		regions = [r.name for r in ec2.regions()]
+		regions.append('all')
+		parser.add_argument('--ec2-region', default = 'all', choices = regions, help = 'Shows assetts for this region')
+
 		self.args = parser.parse_args()
 
 	def go(self):
@@ -61,12 +76,23 @@ class ShowInventoryCli(object):
 
 		if self.args.type == 'instances':
 			for inst in cache.instances(self.customer):
+				if self.args.ec2_region != 'all' and self.args.ec2_region != inst['region']:
+					continue
 				print inst['_id'], string.rjust(inst['region'], 10), string.rjust(inst['state'], 10)
 		elif self.args.type == 'volumes':
 			for vol in cache.volumes(self.customer):
+				if self.args.ec2_region != 'all' and self.args.ec2_region != vol['region']:
+					continue
+				if self.args.instance != None and self.args.instance != vol['instance_id']:
+					continue
 				print vol['_id'], vol['instance_id'], string.rjust(vol['region'], 10), string.rjust(vol['status'], 10), string.rjust(vol['device'], 10)
 		elif self.args.type == 'snapshots':
-			for snap in cache.snapshots(self.customer).limit(10):
+			for snap in cache.snapshots(self.customer): #.limit(10):
+				if self.args.ec2_region != 'all' and self.args.ec2_region != snap['region']:
+					continue
+				if self.args.volume != None and self.args.volume != snap['volume_id']:
+					continue
+
 				print "%s %s %s %s %s" % (
 					snap['_id'],
 					snap['volume_id'],
@@ -89,12 +115,14 @@ class ShowInventoryCli(object):
 
 		for cp in self.customer.cloud_providers().find():
 			if cp.provider_type == 'ec2':
-				inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key)
+				inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key, region = self.args.ec2_region)
 				if self.args.type == 'instances':
 					for inst in inv.instances():
 						print inst.id, string.rjust(inst.region.name, 10), string.rjust(inst.state, 10)
 				elif self.args.type == 'volumes':
 					for vol in inv.volumes():
+						if self.args.instance != None and self.args.instance != vol['instance_id']:
+							continue
 						if vol.attachment_state() == 'attached':
 							instance_id = vol.attach_data.instance_id
 							device = vol.attach_data.device
@@ -111,6 +139,8 @@ class ShowInventoryCli(object):
 				elif self.args.type == 'snapshots':
 					#for snap in itertools.islice(inv.snapshots(), 0, 15):
 					for snap in inv.snapshots():
+						if self.args.volume != None and self.args.volume != snap['volume_id']:
+							continue
 						print "%s %s %s %s %s" % (
 							snap.id,
 							snap.volume_id,
@@ -118,6 +148,7 @@ class ShowInventoryCli(object):
 							snap.status,
 							snap.volume_size,
 						)
+
 	def find_customer(self):
 		customers = accounts.Customers();
 		for c in customers.find():

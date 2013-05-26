@@ -16,8 +16,10 @@ except ImportError:
 
 
 class Ec2Inventory(object):
-    def __init__(self, ec2_access_key, ec2_secret_key):
+    def __init__(self, ec2_access_key, ec2_secret_key, region = 'all'):
         ''' Main execution path '''
+
+        self.selected_region = region
 
         self.ec2_access_key = ec2_access_key
         self.ec2_secret_key = ec2_secret_key
@@ -69,7 +71,7 @@ class Ec2Inventory(object):
 
         self.config_file = os.path.dirname(os.path.realpath(__file__)) + '/ec2.ini'
         if (not os.path.exists(self.config_file)):
-            configRegions = 'all'
+            configRegions = self.selected_region
             self.destination_variable = 'public_dns_name'
             self.vpc_destination_variable = 'ip_address'
         else:
