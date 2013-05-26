@@ -39,10 +39,16 @@ class StoreInventoryCli(object):
 
 		customers = accounts.Customers()
 		for customer in customers.find():
-			inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key)
-			for inst in inv.instances():
-				cache.update_instance(customer, inst)
-				print customer.name, ':', inst.id, ':', inst.state
+			for cp in customer.cloud_providers().find():
+				if cp.provider_type == 'ec2':
+					#customer.add_cloud_provider('ec2')
+					inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key)
+					for inst in inv.instances():
+						cache.update_instance(customer, inst)
+						print customer.name, ':', inst.id, ':', inst.state
+				else:
+					print 'Unimplemented Cloud Provider: ', cp.provider_type
+
 		#TODO: Mark all cached instances that are not in EC2 as terminated
 		#for inst in inv.rds_instances():
 		#	print inst
