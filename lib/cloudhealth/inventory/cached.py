@@ -18,6 +18,13 @@ class CachedInventory(object):
 		if 'inventory' not in self.cloudhealth.collection_names():
 			self.cloudhealth.create_collection('inventory')
 
+	def instances(self, customer):
+		query = {
+			'assett_type': 'ec2_instance',
+			'customer_id': customer.Id(),
+		}
+		return self.cloudhealth.inventory.find(query)
+
 	def update_instance(self, customer, instance):
 		inst_json = self.__inst_to_json(customer, instance)
 		self.cloudhealth.inventory.update(
@@ -35,6 +42,13 @@ class CachedInventory(object):
 			'region': instance.region.name,
 		}
 		return inst_json
+
+	def volumes(self, customer):
+		query = {
+			'assett_type': 'ec2_volume',
+			'customer_id': customer.Id(),
+		}
+		return self.cloudhealth.inventory.find(query)
 
 	def update_volume(self, customer, volume):
 		volume_json = self.__volume_to_json(customer, volume)
@@ -61,6 +75,13 @@ class CachedInventory(object):
 			volume_json['instance_id'] = volume.attach_data.instance_id
 
 		return volume_json
+
+	def snapshots(self, customer):
+		query = {
+			'assett_type': 'ec2_snapshot',
+			'customer_id': customer.Id(),
+		}
+		return self.cloudhealth.inventory.find(query)
 
 	def update_snapshot(self, customer, snapshot):
 		snapshot_json = self.__snapshot_to_json(customer, snapshot)
