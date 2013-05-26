@@ -1,1 +1,1 @@
-from ec2 import Ec2Inventory
+from ec2 import Ec2Inventory, Ec2Metrics

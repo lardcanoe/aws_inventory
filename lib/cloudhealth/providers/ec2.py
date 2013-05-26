@@ -6,8 +6,10 @@ import re
 from time import time
 import boto
 from boto import ec2
+from boto.ec2 import cloudwatch
 from boto import rds
 import ConfigParser
+import datetime
 
 try:
     import json
@@ -224,7 +226,6 @@ class Ec2Inventory(object):
             key = self.__to_safe("tag_" + k + "=" + v)
             self.__push(self.inventory, key, dest)
 
-
     def __add_rds_instance(self, instance, region):
         ''' Adds an RDS instance to the inventory and index, as long as it is
         addressable '''
@@ -273,7 +274,6 @@ class Ec2Inventory(object):
 
         # Inventory: Group by parameter group
         self.__push(self.inventory, self.__to_safe("rds_parameter_group_" + instance.parameter_group.name), dest)
-
 
     def __get_host_info(self):
         ''' Get variables about a specific host '''
@@ -327,7 +327,6 @@ class Ec2Inventory(object):
 
         return self.json_format_dict(instance_vars, True)
 
-
     def __push(self, my_dict, key, element):
         ''' Pushed an element onto an array that may not have been defined in
         the dict '''
@@ -337,13 +336,11 @@ class Ec2Inventory(object):
         else:
             my_dict[key] = [element]
 
-
     def __to_safe(self, word):
         ''' Converts 'bad' characters in a string to underscores so they can be
         used as Ansible groups '''
 
         return re.sub("[^A-Za-z0-9\-]", "_", word)
-
 
     def __json_format_dict(self, data, pretty=False):
         ''' Converts a dict to a JSON object and dumps it as a formatted
@@ -353,3 +350,31 @@ class Ec2Inventory(object):
             return json.dumps(data, sort_keys=True, indent=2)
         else:
             return json.dumps(data)
+
+class Ec2Metrics(object):
+    def __init__(self, ec2_access_key, ec2_secret_key):
+        self.ec2_access_key = ec2_access_key
+        self.ec2_secret_key = ec2_secret_key
+        self.cwc = cloudwatch.CloudWatchConnection(aws_access_key_id=self.ec2_access_key, aws_secret_access_key=self.ec2_secret_key)
+
+    def instance_cpu(self, instance_id):
+        #end = datetime.datetime.utcnow()
+        end = datetime.datetime.utcnow() - datetime.timedelta(minutes=15)
+        start = end - datetime.timedelta(minutes=15)
+        statistics = ['Average', 'Sum', 'Maximum', 'Minimum']
+        metric_name = 'CPUUtilization'
+        namespace = 'AWS/EC2'
+        unit = 'Percent'
+        dimensions = {
+            'InstanceId': [instance_id]
+        }
+        return self.cwc.get_metric_statistics(
+            60,
+            start,
+            end,
+            metric_name,
+            namespace,
+            statistics,
+            dimensions,
+            unit
+        )
