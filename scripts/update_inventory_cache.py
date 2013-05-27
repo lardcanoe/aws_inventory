@@ -4,7 +4,7 @@ import sys
 import os
 import argparse
 
-sys.path.append('../lib')
+sys.path.append(os.path.abspath(os.path.dirname(sys.argv[0])) + '/../lib')
 import cloudhealth
 from cloudhealth import accounts
 from cloudhealth import providers
