@@ -3,13 +3,29 @@
 import sys
 import os
 import argparse
+#from threading import Thread
+import multiprocessing
+import signal
+import time
 
-sys.path.append('../lib')
+#print os.path.abspath(os.path.dirname(sys.argv[0]))
+#print os.path.abspath(__path__)
+
+sys.path.append(os.path.abspath(os.path.dirname(sys.argv[0])) + '/../lib')
 import cloudhealth
 from cloudhealth import accounts
 from cloudhealth import providers
 from cloudhealth import inventory
 from cloudhealth import metrics
+
+def run_worker(id):
+	try:
+		print 'Spawning Worker: ', id, os.getpid()
+		w = metrics.MetricQueueWorker(id)
+		w.go();
+		print 'Exitting Worker: ', id, os.getpid()
+	except:
+		print "[run_worker] Unexpected error:", sys.exc_info()[0]
 
 class StoreMetricCli(object):
 
@@ -18,36 +34,54 @@ class StoreMetricCli(object):
 
 	def parse_cli_args(self):
 		''' Command line argument processing '''
+		parser = argparse.ArgumentParser(prog='Update Metrics')
+		parser.add_argument('--version', action='version', version='%(prog)s 2.0')
+
+		#Display Options
+		parser.add_argument('--verbose', '-v', action='count')
+
+		#Options
+		parser.add_argument('--worker-count', '-w', type=int, choices=range(1, 5), default=1)
+
+		self.args = parser.parse_args()
 
 	def go(self):
 
-		if 'EC2_SECRET_KEY' not in os.environ:
-			print 'Missing EC2_SECRET_KEY environ var'
-			sys.exit(1)
-		if 'EC2_ACCESS_KEY' not in os.environ:
-			print 'Missing EC2_ACCESS_KEY environ var'
-			sys.exit(1)
+		pool = multiprocessing.Pool(self.args.worker_count, self.init_worker)
+		for i in range(self.args.worker_count):
+			pool.apply_async(run_worker, args=(i+1,))
 
-		self.ec2_access_key = os.environ['EC2_ACCESS_KEY']
-		self.ec2_secret_key = os.environ['EC2_SECRET_KEY']
+		try:
+			pool.close()
 
-		cache = inventory.CachedInventory()
+			self.add_assetts_to_queue()
 
+			pool.join()
+		except KeyboardInterrupt:
+			print "Caught KeyboardInterrupt, terminating workers"
+			pool.terminate()
+
+	def init_worker(self):
+		signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+	def add_assetts_to_queue(self):
 		customers = accounts.Customers()
 		for customer in customers.find():
 			for cp in customer.cloud_providers().find():
 				if cp.provider_type == 'ec2':
-					self.update_ec2(customer, cp)
+					self.add_ec2_to_queue(customer)
 				else:
 					print 'Unimplemented Cloud Provider: ', cp.provider_type
 
-	def update_ec2(self, customer, cp):
+	def add_ec2_to_queue(self, customer):
+		qc = metrics.MetricQueueClient()
 		inv_cache = inventory.CachedInventory()
-		metric_cache = metrics.CachedMetrics()
-		ec2_prov = providers.Ec2Metrics(self.ec2_access_key, self.ec2_secret_key)
 		for inst in inv_cache.instances(customer):
-			dps = ec2_prov.instance_cpu(inst['_id'])
-			metric_cache.insert_instance_cpu(customer, inst['_id'], dps)
+			qc.insert(customer, inst['_id'])
+			qc.insert(customer, inst['_id'])
+			qc.insert(customer, inst['_id'])
+			qc.insert(customer, inst['_id'])
+			qc.insert(customer, inst['_id'])
 
 if __name__ == '__main__':
 	cli = StoreMetricCli()

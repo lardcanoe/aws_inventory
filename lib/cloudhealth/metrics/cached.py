@@ -23,13 +23,16 @@ class CachedMetrics(object):
 			'assett_type': 'ec2_instance_cpu',
 			'instance_id': instance_id,
 		}
-		return self.cloudhealth.metrics.find(query)
+		return self.cloudhealth.metrics.find(query).sort([('Timestamp', pymongo.ASCENDING)])
 
-	def insert_instance_cpu(self, customer, instance_id, metrics):
+	def insert_instance_cpu(self, customer_id, instance_id, metrics):
+		x = 0
 		for m in metrics:
 			m['instance_id'] = instance_id
-			m['customer_id'] = customer.Id()
+			m['customer_id'] = customer_id
 			self.cloudhealth.metrics.insert(
 				m
 			)
+			x += 1
+		return x
 
