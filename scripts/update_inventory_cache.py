@@ -25,24 +25,13 @@ class StoreInventoryCli(object):
 
 	def go(self):
 
-		if 'AWS_SECRET_KEY' not in os.environ:
-			print 'Missing AWS_SECRET_KEY environ var'
-			sys.exit(1)
-		if 'AWS_ACCESS_KEY' not in os.environ:
-			print 'Missing AWS_ACCESS_KEY environ var'
-			sys.exit(1)
-
-		ec2_access_key = os.environ['AWS_ACCESS_KEY']
-		ec2_secret_key = os.environ['AWS_SECRET_KEY']
-
 		cache = inventory.CachedInventory()
 
 		customers = accounts.Customers()
 		for customer in customers.find():
 			for cp in customer.cloud_providers().find():
 				if cp.provider_type == 'ec2':
-					#customer.add_cloud_provider('ec2')
-					inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key)
+					inv = providers.Ec2Inventory(cp)
 					for inst in inv.instances():
 						cache.update_instance(customer, inst)
 						print customer.name, ':Instance:', inst.id, ':', inst.state

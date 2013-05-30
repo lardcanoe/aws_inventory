@@ -11,6 +11,10 @@ from boto import rds
 import ConfigParser
 import datetime
 
+import pymongo
+from pymongo import MongoClient
+from bson.objectid import ObjectId
+
 try:
     import json
 except ImportError:
@@ -18,13 +22,16 @@ except ImportError:
 
 
 class Ec2Inventory(object):
-    def __init__(self, ec2_access_key, ec2_secret_key, region = 'all'):
+    def __init__(self, provider, region = 'all'):
         ''' Main execution path '''
 
         self.selected_region = region
 
-        self.ec2_access_key = ec2_access_key
-        self.ec2_secret_key = ec2_secret_key
+        if type(provider) is str:
+            self.__load_from_db(provider) #it's the _id from the rabbitmq header
+        else:
+            self.ec2_access_key = provider.aws_access_key
+            self.ec2_secret_key = provider.aws_secret_key
 
         # Inventory grouped by instance IDs, tags, security groups, regions,
         # and availability zones
@@ -37,6 +44,19 @@ class Ec2Inventory(object):
 
         # Read settings and parse CLI arguments
         self.__read_settings()
+
+    def __load_from_db(self, id):
+        self.mongo = MongoClient('localhost', 27017)
+        self.cloudhealth = self.mongo['cloudhealth']
+        provider = self.cloudhealth.providers.find_one({'_id': ObjectId(id)})
+        self.ec2_access_key = provider['aws_access_key']
+        self.ec2_secret_key = provider['aws_secret_key']
+
+    def __getattr__(self, key):
+        if key == 'aws_access_key':
+            return object.__getattribute__(self, 'ec2_access_key')
+        if key == 'aws_secret_key':
+            return object.__getattribute__(self, 'ec2_secret_key')
 
     def instances(self):
         ''' Do API calls to each region '''
@@ -352,9 +372,9 @@ class Ec2Inventory(object):
             return json.dumps(data)
 
 class Ec2Metrics(object):
-    def __init__(self, ec2_access_key, ec2_secret_key):
-        self.ec2_access_key = ec2_access_key
-        self.ec2_secret_key = ec2_secret_key
+    def __init__(self, ec2_provider):
+        self.ec2_access_key = ec2_provider.aws_access_key
+        self.ec2_secret_key = ec2_provider.aws_secret_key
         self.cwc = cloudwatch.CloudWatchConnection(aws_access_key_id=self.ec2_access_key, aws_secret_access_key=self.ec2_secret_key)
 
     def instance_cpu(self, instance_id):

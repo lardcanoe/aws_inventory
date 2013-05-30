@@ -22,13 +22,13 @@
 <template name="inventory">
   <h3>Instances</h3>
   <ul>
-  {{#each instances}}
+  {{#each instances _id}}
   	<li>{{_id}} - {{state}} - {{region}} - Volumes: {{#each instance_volumes _id}}{{_id}} {{/each}}
   {{/each}}
   </ul>
   <h3>Volumes</h3>
   <ul>
-  {{#each volumes}}
+  {{#each volumes _id}}
   	<li>{{_id}} - {{attachment_state}} - {{device}} - {{status}} - {{instance_id}} - {{region}} - Snapshots: {{snapshot_count _id}}
   {{/each}}
   </ul>

@@ -103,19 +103,10 @@ class ShowInventoryCli(object):
 				#snap['_id'], string.rjust(snap['region'], 10), string.rjust(snap['state'], 10)
 
 	def show_from_provider(self):
-		if 'AWS_SECRET_KEY' not in os.environ:
-			print 'Missing AWS_SECRET_KEY environ var'
-			sys.exit(1)
-		if 'AWS_ACCESS_KEY' not in os.environ:
-			print 'Missing AWS_ACCESS_KEY environ var'
-			sys.exit(1)
-
-		ec2_access_key = os.environ['AWS_ACCESS_KEY']
-		ec2_secret_key = os.environ['AWS_SECRET_KEY']
 
 		for cp in self.customer.cloud_providers().find():
 			if cp.provider_type == 'ec2':
-				inv = providers.Ec2Inventory(ec2_access_key, ec2_secret_key, region = self.args.ec2_region)
+				inv = providers.Ec2Inventory(cp, region = self.args.ec2_region)
 				if self.args.type == 'instances':
 					for inst in inv.instances():
 						print inst.id, string.rjust(inst.region.name, 10), string.rjust(inst.state, 10)

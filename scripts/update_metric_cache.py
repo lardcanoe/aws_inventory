@@ -3,7 +3,6 @@
 import sys
 import os
 import argparse
-#from threading import Thread
 import multiprocessing
 import signal
 import time
@@ -69,19 +68,15 @@ class StoreMetricCli(object):
 		for customer in customers.find():
 			for cp in customer.cloud_providers().find():
 				if cp.provider_type == 'ec2':
-					self.add_ec2_to_queue(customer)
+					self.add_ec2_to_queue(customer, cp)
 				else:
 					print 'Unimplemented Cloud Provider: ', cp.provider_type
 
-	def add_ec2_to_queue(self, customer):
+	def add_ec2_to_queue(self, customer, cp):
 		qc = metrics.MetricQueueClient()
 		inv_cache = inventory.CachedInventory()
 		for inst in inv_cache.instances(customer):
-			qc.insert(customer, inst['_id'])
-			qc.insert(customer, inst['_id'])
-			qc.insert(customer, inst['_id'])
-			qc.insert(customer, inst['_id'])
-			qc.insert(customer, inst['_id'])
+			qc.insert(customer, inst['_id'], cp._id)
 
 if __name__ == '__main__':
 	cli = StoreMetricCli()

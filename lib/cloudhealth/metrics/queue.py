@@ -1,5 +1,5 @@
 import os
-import sys
+import sys, traceback
 import pika
 from bson.objectid import ObjectId
 
@@ -25,7 +25,7 @@ class MetricQueueClient(object):
 			auto_delete=False
 		)
 
-	def insert(self, customer, instance_id):
+	def insert(self, customer, instance_id, provider_objid):
 		self.channel.basic_publish(
 			exchange='',
 			routing_key='metrics',
@@ -35,6 +35,7 @@ class MetricQueueClient(object):
 				headers = {
 					'instance_id': instance_id,
 					'customer_id': str(customer.Id()),
+					'provider_id': str(provider_objid),
 				}
 			))
 
@@ -47,16 +48,6 @@ class MetricQueueWorker(object):
 
 	def __init__(self, id):
 		self.id = id
-
-		if 'AWS_SECRET_KEY' not in os.environ:
-			print 'Missing AWS_SECRET_KEY environ var'
-			sys.exit(1)
-		if 'AWS_ACCESS_KEY' not in os.environ:
-			print 'Missing AWS_ACCESS_KEY environ var'
-			sys.exit(1)
-
-		self.ec2_access_key = os.environ['AWS_ACCESS_KEY']
-		self.ec2_secret_key = os.environ['AWS_SECRET_KEY']
 
 	def go(self):
 		self.messages = 0
@@ -129,10 +120,16 @@ class MetricQueueWorker(object):
 		#print method
 
 		#<BasicProperties(['delivery_mode=1', "headers={'Client': 'Browser'}"])>
-		if 'instance_id' in properties.headers:
+		if 'instance_id' in properties.headers and 'provider_id' in properties.headers:
 			try:
+				instance_id = str(properties.headers['instance_id'])
+				provider_id = str(properties.headers['provider_id'])
+				print "Processing: instance_id -", instance_id, " provider_id -", provider_id 
+
+				provider = providers.Ec2Inventory(provider_id)
+
 				metric_cache = CachedMetrics()
-				ec2_prov = providers.Ec2Metrics(self.ec2_access_key, self.ec2_secret_key)
+				ec2_prov = providers.Ec2Metrics(provider)
 				dps = ec2_prov.instance_cpu(properties.headers['instance_id'])
 				x = metric_cache.insert_instance_cpu(
 					ObjectId(properties.headers['customer_id']), 
@@ -145,8 +142,12 @@ class MetricQueueWorker(object):
 
 				self.check_queue_empty()
 
-			except:
-				print "[handle_delivery] Unexpected error:", sys.exc_info()[0]
+			except Exception, ex:
+				print "[handle_delivery] Unexpected error: %s" % ex 
+				tb = traceback.format_exc()
+				print tb
+				#print "[handle_delivery] Unexpected error:", sys.exc_info()[0]
+				#traceback.print_stack()
 
 	def on_cancelok(self, unused_frame):
 		self.channel.close()
