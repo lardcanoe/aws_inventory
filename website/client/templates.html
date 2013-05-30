@@ -1,0 +1,35 @@
+<head>
+  <title>AWS Inventory</title>
+</head>
+
+<body>
+  {{> customers}}
+</body>
+
+<template name="customers">
+  <h1>Customers</h1>
+  {{#each customers}}
+  	{{> customer}}
+  {{/each}}
+  <br />
+</template>
+
+<template name="customer">
+  <h2>{{name}}</h2>
+  {{> inventory}}
+</template>
+
+<template name="inventory">
+  <h3>Instances</h3>
+  <ul>
+  {{#each instances}}
+  	<li>{{_id}} - {{state}} - {{region}} - Volumes: {{#each instance_volumes _id}}{{_id}} {{/each}}
+  {{/each}}
+  </ul>
+  <h3>Volumes</h3>
+  <ul>
+  {{#each volumes}}
+  	<li>{{_id}} - {{attachment_state}} - {{device}} - {{status}} - {{instance_id}} - {{region}} - Snapshots: {{snapshot_count _id}}
+  {{/each}}
+  </ul>
+</template>

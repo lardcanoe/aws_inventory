@@ -48,15 +48,15 @@ class MetricQueueWorker(object):
 	def __init__(self, id):
 		self.id = id
 
-		if 'EC2_SECRET_KEY' not in os.environ:
-			print 'Missing EC2_SECRET_KEY environ var'
+		if 'AWS_SECRET_KEY' not in os.environ:
+			print 'Missing AWS_SECRET_KEY environ var'
 			sys.exit(1)
-		if 'EC2_ACCESS_KEY' not in os.environ:
-			print 'Missing EC2_ACCESS_KEY environ var'
+		if 'AWS_ACCESS_KEY' not in os.environ:
+			print 'Missing AWS_ACCESS_KEY environ var'
 			sys.exit(1)
 
-		self.ec2_access_key = os.environ['EC2_ACCESS_KEY']
-		self.ec2_secret_key = os.environ['EC2_SECRET_KEY']
+		self.ec2_access_key = os.environ['AWS_ACCESS_KEY']
+		self.ec2_secret_key = os.environ['AWS_SECRET_KEY']
 
 	def go(self):
 		self.messages = 0

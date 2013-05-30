@@ -25,15 +25,15 @@ class StoreInventoryCli(object):
 
 	def go(self):
 
-		if 'EC2_SECRET_KEY' not in os.environ:
-			print 'Missing EC2_SECRET_KEY environ var'
+		if 'AWS_SECRET_KEY' not in os.environ:
+			print 'Missing AWS_SECRET_KEY environ var'
 			sys.exit(1)
-		if 'EC2_ACCESS_KEY' not in os.environ:
-			print 'Missing EC2_ACCESS_KEY environ var'
+		if 'AWS_ACCESS_KEY' not in os.environ:
+			print 'Missing AWS_ACCESS_KEY environ var'
 			sys.exit(1)
 
-		ec2_access_key = os.environ['EC2_ACCESS_KEY']
-		ec2_secret_key = os.environ['EC2_SECRET_KEY']
+		ec2_access_key = os.environ['AWS_ACCESS_KEY']
+		ec2_secret_key = os.environ['AWS_SECRET_KEY']
 
 		cache = inventory.CachedInventory()
 
